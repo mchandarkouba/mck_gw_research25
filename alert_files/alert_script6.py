@@ -1,7 +1,7 @@
 """
 ENVIRONMENT DETAILS:
     - python=3.11 with conda
-    - install***: gcn-kafka, slack_sdk, astropy, astropy-healpix, healpy,*** ligo.skymap (healpy BEFORE ligo.skymap if on macbook), lxml
+    - install***: gcn-kafka, slack_sdk, astropy, astropy-healpix, healpy,*** ligo.skymap (healpy BEFORE ligo.skymap if on macbook), lxml, pandas
         FOR MAC: all packages EXCEPT healpy can be installed with pip: Use conda install healpy FOLLOWED by pip install ligo.skymap
 
 This program is intended to be used for crossmatching Einstein Probe WXT alerts with the GraceDB gravitational wave event catalog.
@@ -264,7 +264,7 @@ def main():
                         #'igwn.gwalert',
                         #'gcn.notices.swift.bat.guano',
                         'gcn.notices.einstein_probe.wxt.alert',
-                        'gcn.heartbeat'
+                        #'gcn.heartbeat' #FOR TESTING CONNECTIVITY
                         ])
     
     id_letter = ''

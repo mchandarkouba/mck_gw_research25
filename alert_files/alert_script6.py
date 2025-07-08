@@ -7,6 +7,9 @@ ENVIRONMENT DETAILS:
 This program is intended to be used for crossmatching Einstein Probe WXT alerts with the GraceDB gravitational wave event catalog.
 It finds events each that are temporally & spatially coincident, then exports a matplotlib skymap of the gravitational wave PDF and 
 Einstein probe location to Slack.
+
+main() takes information from the alert stream, and tests(use_preset) has two modes: use_preset==True means using a pre-discovered EP and GW event pair, 
+while use_preset==False means manually inputting EP data for a single test.
     
 """
 
@@ -317,7 +320,7 @@ def tests(use_preset:bool):
     
     else: #for the same as above, use EP241126a,300.97,-68.777,2024-08-07 05:42:48
         keys = ('source name', 'RA', 'DEC', 'trigger time')
-        vals = input(f'enter params in this format: {keys}\n').split(',')
+        vals = input(f'enter params in this format: {repr(keys)[1:-1]}, without spaces after commas: \n').split(',')
         ep = {k:vals[n] for n,k in enumerate(keys)}
         
         ep['ICRS'] = SkyCoord(float(ep['RA']), float(ep['DEC']), unit=units.deg)
@@ -328,4 +331,4 @@ def tests(use_preset:bool):
 
     followUp(ep, cands)
 
-tests(use_preset=False) #
+main() #tests(use_preset=False) #

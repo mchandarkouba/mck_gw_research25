@@ -6,9 +6,7 @@ All scripts are made by Max Chandar-Kouba, research undergraduate in Physics.
 Most work was analysis or not highly involved in the deeper cosmology. Nonetheless, the overarching work concerns Binary Black Hole (BBH) mergers being multimessenger events.
 
 # Branches
-pass
-
-## Detector Analysis
+### Detector Analysis
 pass
 
 ## Crossmatch 1

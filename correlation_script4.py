@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import json
 
 from os import path, listdir
 import subprocess
@@ -46,7 +47,7 @@ class GW:
         self.path_flat = MOD_DIR + self.name + "_flattened.fits"
         
         if path.exists(self.path_flat):
-            print(f'{self.path_flat} already found, using this.')
+            print(f"\t\t{self.path_flat} already found, using this.")
         
         else:
             subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat]) #uses cmd to flatten the skymap from a filepath
@@ -102,7 +103,7 @@ class GW:
             skymap.write(self.path, overwrite=True, format='fits')
             
             if path.exists(self.path_flat):
-                print(f'{self.path_flat} already found, using this.')
+                print(f'\t\t{self.path_flat} already found, using this.')
             
             else:
                 subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat]) #uses cmd to flatten the skymap from a filepath
@@ -289,22 +290,53 @@ def main():
     
     gw_skymaps = pick_fits()
     
-    
-    allCands = None
-    i=0
-    for event in gw_skymaps:  
-        newCands = findCandidates(event, gw_skymaps[event], catalogs, conf)
-        allCands = vstack([allCands, newCands]) if allCands!=None else newCands
-        
-        i+=1
-        if i>5: break
-        
     candFilename = f"candidates_{'&'.join(catalogs)}_{np.round(100*conf)}percent.fits"
-    candFilepath = OUTPUT_DIR
+    eventFilename = f"event_cache_{'&'.join(catalogs)}_{np.round(100*conf)}percent.json"
     
-    allCands.write(candFilename, format="fits", overwrite=True)
+    candFilepath = OUTPUT_DIR + candFilename
+    eventFilepath = OUTPUT_DIR + eventFilename
+    
+    allSavedCands = None
+    allUsedEvents = {}
+    
+    if path.exists(candFilepath):
+        print(f"Found candidate table from catalogs {catalogs} at confidence {conf}, loading...")
+        with fits_astropy.open(candFilepath, cache=False) as hdul:
+            allSavedCands = Table( hdul[1].data )
+            negativeDists = np.where(allSavedCands["COORD.distance"] < 0)
+            RA, DEC, dL = allSavedCands["COORD.ra"], allSavedCands["COORD.dec"], allSavedCands["COORD.distance"]
+            
+            COORD = SkyCoord(
+                             RA*units.deg,
+                             DEC*units.deg,
+                             dL*units.Mpc,
+                             
+                             frame="icrs", 
+                             )
+            
+            allSavedCands.remove_columns(["COORD.ra", "COORD.dec", "COORD.distance"])
+            allSavedCands.add_column(COORD, index=1, name="COORD")
+            
+        print("\tLoaded and formatted!\n")
+            
+    if path.exists(eventFilepath):
+        print(f"Found JSON of saved GW-AGN pairs crossmatched from catalogs {catalogs} at confidence {conf}, loading...\n")
+        with open(eventFilepath, 'r') as file: allUsedEvents = json.load(file)
+            
+    for event in gw_skymaps:
         
+        if event in allUsedEvents:
+            print(f"\tEvent {event} has already been crossmatched according to JSON {eventFilename}, skipping...\n")
+            continue
+
+        newCands = findCandidates(event, gw_skymaps[event], catalogs, conf)
+        allSavedCands = vstack([allSavedCands, newCands]) if ( allSavedCands!=None ) else newCands
+        allSavedCands.write(candFilepath, format="fits", overwrite=True)
         
+        allUsedEvents[event] = str([ str(x) for x in newCands["ID"] ])
+        with open(eventFilepath, 'w') as file: json.dump(allUsedEvents, file)
+        print("\t\tCrossmatched and cached to JSON!\n")
+
 ###############################################################################
 
 main()

@@ -241,7 +241,8 @@ def get_gw_name(s):
           
 def pick_fits():
         
-    ligo_runs = ['O4_skymaps/', 'O2_skymaps/', 'O1_skymaps/']
+    ligo_runs = [ s+'/' for s in listdir(LIGO_DIR) ]
+    ligo_runs.remove(".DS_Store/")
     eventNames = set()
     
     for subdir in ligo_runs:
@@ -318,25 +319,43 @@ def main():
             allSavedCands.add_column(COORD, index=1, name="COORD")
             
         print("\tLoaded and formatted!\n")
+    
+    else:
+        print(f"Creating table of candidates for catalogs {catalogs} at confidence {conf} .\n")
+
             
     if path.exists(eventFilepath):
         print(f"Found JSON of saved GW-AGN pairs crossmatched from catalogs {catalogs} at confidence {conf}, loading...\n")
         with open(eventFilepath, 'r') as file: allUsedEvents = json.load(file)
+        
+    else:
+        print(f"Creating JSON for GW-AGN pairs using catalogs {catalogs} at confidence {conf} .\n")
+
             
-    for event in gw_skymaps:
+    for tally, event in enumerate(gw_skymaps):
         
         if event in allUsedEvents:
-            print(f"\tEvent {event} has already been crossmatched according to JSON {eventFilename}, skipping...\n")
+            print(f"\tEvent {event} has already been crossmatched according to JSON {eventFilename}, skipping... ({tally}/{len(gw_skymaps)}, {100*np.round(tally/len(gw_skymaps), 3)}%)\n")
             continue
+        
+        eventCands = findCandidates(event, gw_skymaps[event], catalogs, conf)
 
-        newCands = findCandidates(event, gw_skymaps[event], catalogs, conf)
-        allSavedCands = vstack([allSavedCands, newCands]) if ( allSavedCands!=None ) else newCands
+        if allSavedCands is not None:
+            newCands = np.setdiff1d( eventCands["ID"], allSavedCands["ID"], assume_unique=True)
+            newCands = eventCands[ [x in newCands for x in eventCands["ID"]] ]
+            allSavedCands = vstack([allSavedCands, newCands])
+            
+        else:
+            allSavedCands = eventCands
+        
+        
         allSavedCands.write(candFilepath, format="fits", overwrite=True)
         
-        allUsedEvents[event] = str([ str(x) for x in newCands["ID"] ])
+        allUsedEvents[event] = str([ str(x) for x in eventCands["ID"] ])
         with open(eventFilepath, 'w') as file: json.dump(allUsedEvents, file)
-        print("\t\tCrossmatched and cached to JSON!\n")
+        print(f"\t\tCrossmatched and cached to JSON! ({tally}/{len(gw_skymaps)}, {100*np.round(tally/len(gw_skymaps), 3)}%)\n")
 
+        
 ###############################################################################
 
 main()

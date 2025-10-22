@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import json
 
+from functools import cache
 from os import path, listdir
 import subprocess
 from skymap2_corr import get_skymap
@@ -18,14 +19,12 @@ from ligo.skymap.postprocess.crossmatch import crossmatch
 from ligo.gracedb.rest import GraceDb
 import requests
 
-
-
+###############################################################################
 
 TOP_DIR = f'{path.dirname(__file__)}/' #all corr script files
 MOD_DIR = TOP_DIR + 'modified_skymaps/' #for flattened and confidence region skymaps
 OUTPUT_DIR = TOP_DIR + 'corr_output/' #unused at the moment
 LIGO_DIR = TOP_DIR + 'LIGO_runs/' #where to access GW files
-
 
 ###############################################################################
 
@@ -52,7 +51,9 @@ class GW:
         else:
             subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat]) #uses cmd to flatten the skymap from a filepath
         
-        self.fits = fits_ligo.read_sky_map(self.path, moc=True)
+        self.fits = region.fits = fits_ligo.read_sky_map(self.path, moc=True)
+        
+        
         #self.fits_flat = fits_ligo.read_sky_map(self.path_flat)
         
         self.prob = None
@@ -68,7 +69,7 @@ class GW:
         
         """
             
-        def __init__(self, c):
+        def __init__(self, c:float):
             
             self.name = f"{np.round(100*c)}percent_{self.name}" # <-- technically not yet flattened
             self.level = c
@@ -111,22 +112,23 @@ class GW:
             
             #self.fits_flat = fits_ligo.read_sky_map(self.path_flat)
             
-        def roundArea(self):
+        def round_area(self):
             n = self.area
             g = lambda n: int(-np.round( np.log10(n.value)) +2)
             return np.round(n, g(n))
- 
-def inRegion(gw, region, objects):
-    results = crossmatch(sky_map = gw.fits,
-                         coordinates=objects['COORD'], 
-                         cosmology=True
-                         )
-    
-    return results.searched_prob < region.level
+
+        def in_region(self, objects:pd.DataFrame) -> np.ndarray:
+            results = crossmatch(sky_map = self.fits,
+                                 coordinates=objects['COORD'], 
+                                 cosmology=True
+                                 )
+            
+            return results.searched_prob < self.level
 
 ###############################################################################
 
-def loadCatalog(name:str):
+@cache
+def load_catalog(name:str) -> (Table,list):
     key = {
             'milliquas' : {'url': 'https://quasars.org/milliquas.fits.zip',
                           'keys': ['NAME', 'RA', 'DEC', 'Z']
@@ -136,7 +138,7 @@ def loadCatalog(name:str):
                       'keys': ['source_id', 'ra', 'dec', 'redshift_quaia']
                      },
           }
-    
+
     catalog_dir = f'{TOP_DIR}{name}.fits'
     address=catalog_dir if path.exists(catalog_dir) else key[name]['url']
     
@@ -151,15 +153,15 @@ def loadCatalog(name:str):
     except Exception as e:
         print(f'Error downloading or retrieving: {e}')
 
-def formatCatalog(c, keys):
+def format_catalog(c:np.ndarray, keys:dict) -> np.ndarray:
     ID, RA, DEC, Z = keys
     c = c[ np.where(c[Z]>=0) ]
     if not isinstance(c[ID].dtype, str): c[ID] = c[ID].astype(str)
     
     return c
 
-def findCandidates(gw_name, gw_path, catalogs, conf):
-    gw = GW(gw_name, gw_path) #'S240807h' for testing
+def find_cands(gwName:str, gwPath:str, catalogs:set, conf:float) -> Table:
+    gw = GW(gwName, gwPath) #'S240807h' for testing
     region = gw.ConfidenceRegion(conf)
     
     colnames = ['ID', 'COORD', 'CATALOG']
@@ -168,9 +170,9 @@ def findCandidates(gw_name, gw_path, catalogs, conf):
                        )
     
     for name in catalogs:
-        catalog, keys = loadCatalog(name)
+        catalog, keys = load_catalog(name)
         ID, RA, DEC, Z = keys
-        catalog = formatCatalog(catalog, keys)
+        catalog = format_catalog(catalog, keys)
         
         ID, RA, DEC, Z = catalog[ID], catalog[RA]*units.deg, catalog[DEC]*units.deg, catalog[Z]
         dL = Planck15.luminosity_distance(Z)
@@ -178,45 +180,46 @@ def findCandidates(gw_name, gw_path, catalogs, conf):
         CATALOG = Table.Column([name]*len(ID))
 
         objects = Table([ID, COORD, CATALOG], names=colnames)
-        bools = inRegion(gw, region, objects)
+        bools = region.in_region(objects)
         candidates = vstack([candidates, objects[bools]]) if np.size(candidates)!=0 else objects[bools]
     
     return candidates
 
-def gw_dataFrame(updateDF=False):
+def gw_DataFrame(updateDF=False) -> pd.DataFrame:
+    print("\tLoading GW DataFrame from file.\n")
     
-    gw_arr_name = 'gw_dataFrame.csv'
-    gw_arr_path = TOP_DIR + gw_arr_name
+    dfName = 'gw_dataFrame.csv'
+    dfPath = TOP_DIR + dfName
     
-    if path.exists(gw_arr_path) and not updateDF:
+    if path.exists(dfPath) and not updateDF:
         print('\tGW File already exists!')
-        gw_arr = pd.read_csv(gw_arr_path)
+        gwDataFrame = pd.read_csv(dfPath)
     
     else:
-        
-        #for subdir in LIGO_DIR
+        print("\tCreating GW DataFrame from GWSOC file...\n")
         
         filename = 'event-versions.csv'
         filepath = TOP_DIR + filename
         event_data = pd.read_csv(filepath)
-        axes = ['final_mass_source_upper', 'detail_url']#list(set([(axis_name if 'mass' in axis_name else None) for axis_name in event_data.axes]).remove(None))
-        data = event_data[axes]
-        f_cover = pd.Series([0.9]*len(data['final_mass_source_upper']))
         
-        superevents = []
+        massCols = ['mass_1_source', 'mass_2_source','final_mass_source_upper', ]#list(set([(axis_name if 'mass' in axis_name else None) for axis_name in event_data.axes]).remove(None))
+        MASSES = event_data[massCols]
+        FREQ = pd.Series([0.9]*len(MASSES))
+        ID = []
         for i,url in enumerate(event_data['detail_url']):
-            graceID = requests.get(url).json()['grace_id']
-            superevents += [graceID]
+            graceID = get_gw_name(url) #requests.get(url).json()['grace_id']
+            ID += [graceID]
             if i%10==9: print(f'\t Progress: {100*(i+1)/len(event_data["detail_url"])//1}%')
         
-        superevents = pd.Series(superevents, name='superevents')
-        gw_arr = pd.concat([f_cover, data, superevents], axis=1)
+        print()
+        ID = pd.Series(ID, name='grace_id')
+        gwDataFrame = pd.concat([FREQ, MASSES, ID], axis=1)
     
-        gw_arr.to_csv(gw_arr_path)
-        
-    return gw_arr
+        gwDataFrame.to_csv(dfPath)
 
-def get_gw_name(s):
+    return gwDataFrame
+
+def get_gw_name(s:str) -> str:
     for i in range(len(s)-1):
         c0 = s[i]
         c1 = s[i+1]
@@ -239,13 +242,13 @@ def get_gw_name(s):
     
     return None       
           
-def pick_fits():
+def pick_fits() -> dict:
         
-    ligo_runs = [ s+'/' for s in listdir(LIGO_DIR) ]
-    ligo_runs.remove(".DS_Store/")
+    ligoRuns = [ s+'/' for s in listdir(LIGO_DIR) ]
+    ligoRuns.remove(".DS_Store/")
     eventNames = set()
     
-    for subdir in ligo_runs:
+    for subdir in ligoRuns:
         files = listdir(LIGO_DIR+subdir)
         
         for file in files:
@@ -256,7 +259,7 @@ def pick_fits():
     
     
     eventMaster = dict()
-    for subdir in ligo_runs:
+    for subdir in ligoRuns:
         sub_filenames = listdir(LIGO_DIR+subdir)
         
         for name in eventNames:
@@ -282,14 +285,7 @@ def pick_fits():
     
     return eventPreferred
 
-###############################################################################
-
-def main():
-    catalogs = {'milliquas', 'quaia'}    
-    far = 3.175e-8 #1/yr in Hz
-    conf = 0.90
-    
-    gw_skymaps = pick_fits()
+def agn_Table(catalogs:set, conf:float, gwSkymaps:dict) -> Table:
     
     candFilename = f"candidates_{'&'.join(catalogs)}_{np.round(100*conf)}percent.fits"
     eventFilename = f"event_cache_{'&'.join(catalogs)}_{np.round(100*conf)}percent.json"
@@ -332,13 +328,13 @@ def main():
         print(f"Creating JSON for GW-AGN pairs using catalogs {catalogs} at confidence {conf} .\n")
 
             
-    for tally, event in enumerate(gw_skymaps):
+    for tally, event in enumerate(gwSkymaps):
         
         if event in allUsedEvents:
-            print(f"\tEvent {event} has already been crossmatched according to JSON {eventFilename}, skipping... ({tally}/{len(gw_skymaps)}, {100*np.round(tally/len(gw_skymaps), 3)}%)\n")
+            print(f"\tEvent {event} has already been crossmatched according to JSON {eventFilename}, skipping... ({tally}/{len(gwSkymaps)}, {100*np.round(tally/len(gwSkymaps), 3)}%)\n")
             continue
-        
-        eventCands = findCandidates(event, gw_skymaps[event], catalogs, conf)
+         
+        eventCands = find_cands(event, gwSkymaps[event], catalogs, conf)
 
         if allSavedCands is not None:
             newCands = np.setdiff1d( eventCands["ID"], allSavedCands["ID"], assume_unique=True)
@@ -353,11 +349,22 @@ def main():
         
         allUsedEvents[event] = str([ str(x) for x in eventCands["ID"] ])
         with open(eventFilepath, 'w') as file: json.dump(allUsedEvents, file)
-        print(f"\t\tCrossmatched and cached to JSON! ({tally}/{len(gw_skymaps)}, {100*np.round(tally/len(gw_skymaps), 3)}%)\n")
+        print(f"\t\tCrossmatched and cached to JSON! ({tally}/{len(gwSkymaps)}, {100*np.round(tally/len(gwSkymaps), 3)}%)\n")
 
-        
+    return allSavedCands
+
+###############################################################################
+
+def main():
+    catalogs = {'milliquas', 'quaia'}    
+    far = 3.175e-8 #1/yr in Hz
+    conf = 0.90
+    
+    gwSkymaps = pick_fits()
+    
+    gwDataFrame = gw_DataFrame(updateDF=True)
+    
+    agnTable = agn_Table(catalogs, conf, gwSkymaps)
 ###############################################################################
 
 main()
-
-

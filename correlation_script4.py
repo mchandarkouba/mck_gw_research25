@@ -35,29 +35,28 @@ class GW:
     
     """
     
-    def __init__(self, name:str, subpath:str):
+    def __init__(self, name:str, subpath:str, flatten=False, image=False):
         path_dir = LIGO_DIR
         
         region = self.ConfidenceRegion
 
         self.name = region.name = name
         self.path = region.path = path_dir + subpath
-        
-        self.path_flat = MOD_DIR + self.name + "_flattened.fits"
-        
-        if path.exists(self.path_flat):
-            print(f"\t\t{self.path_flat} already found, using this.")
-        
-        else:
-            subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat]) #uses cmd to flatten the skymap from a filepath
-        
         self.fits = region.fits = fits_ligo.read_sky_map(self.path, moc=True)
         
+        if flatten: 
+            self.path_flat = MOD_DIR + self.name + "_flattened.fits"
         
-        #self.fits_flat = fits_ligo.read_sky_map(self.path_flat)
+            if path.exists(self.path_flat):
+                print(f"\t\t{self.path_flat} already found, using this.")
+            
+            else:
+                subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat]) #uses cmd to flatten the skymap from a filepath
         
-        self.prob = None
-        self.img = None
+            self.fits_flat = fits_ligo.read_sky_map(self.path_flat, moc=False)
+                    
+            
+        if image: self.img = None
 
     def __repr__(self):
         return self.name
@@ -69,7 +68,7 @@ class GW:
         
         """
             
-        def __init__(self, c:float):
+        def __init__(self, c:float, flatten=False):
             
             self.name = f"{np.round(100*c)}percent_{self.name}" # <-- technically not yet flattened
             self.level = c
@@ -98,19 +97,21 @@ class GW:
             
             #Making FITS skymap, flattening and saving data to the GW object
             
-            self.path = MOD_DIR + self.name
-            self.path_flat = MOD_DIR + self.name + "_flattened.fits"
-            
+            self.path = MOD_DIR + self.name            
             skymap.write(self.path, overwrite=True, format='fits')
             
-            if path.exists(self.path_flat):
-                print(f'\t\t{self.path_flat} already found, using this.')
             
-            else:
-                subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat]) #uses cmd to flatten the skymap from a filepath
-            
-            
-            #self.fits_flat = fits_ligo.read_sky_map(self.path_flat)
+            if flatten:
+                self.path_flat = MOD_DIR + self.name + "_flattened.fits"
+    
+                if path.exists(self.path_flat):
+                    print(f'\t\t{self.path_flat} already found, using this.')
+                
+                else:
+                    subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat]) #uses cmd to flatten the skymap from a filepath
+                
+                
+                self.fits_flat = fits_ligo.read_sky_map(self.path_flat)
             
         def round_area(self):
             n = self.area
@@ -163,7 +164,7 @@ def format_catalog(c:np.ndarray, keys:dict) -> np.ndarray:
 def find_cands(gwName:str, gwPath:str, catalogs:set, conf:float) -> Table:
     gw = GW(gwName, gwPath) #'S240807h' for testing
     region = gw.ConfidenceRegion(conf)
-    
+    print(f"({100*conf}% conf. region size: {region.round_area()})\n")
     colnames = ['ID', 'COORD', 'CATALOG']
     candidates = Table([ np.array([]) ]*len(colnames),
                        names=colnames
@@ -296,6 +297,8 @@ def agn_Table(catalogs:set, conf:float, gwSkymaps:dict) -> Table:
     allSavedCands = None
     allUsedEvents = {}
     
+    ###########################################################################
+    
     if path.exists(candFilepath):
         print(f"Found candidate table from catalogs {catalogs} at confidence {conf}, loading...")
         with fits_astropy.open(candFilepath, cache=False) as hdul:
@@ -327,13 +330,16 @@ def agn_Table(catalogs:set, conf:float, gwSkymaps:dict) -> Table:
     else:
         print(f"Creating JSON for GW-AGN pairs using catalogs {catalogs} at confidence {conf} .\n")
 
-            
+    ###########################################################################      
+      
     for tally, event in enumerate(gwSkymaps):
+        progress = f"({tally}/{len(gwSkymaps)}, {100*np.round(tally/len(gwSkymaps), 3)}%)"
         
         if event in allUsedEvents:
-            print(f"\tEvent {event} has already been crossmatched according to JSON {eventFilename}, skipping... ({tally}/{len(gwSkymaps)}, {100*np.round(tally/len(gwSkymaps), 3)}%)\n")
+            print(f"\tEvent {event} has already been crossmatched according to JSON {eventFilename}, skipping... {progress}\n")
             continue
-         
+        
+        print(f"\tCrossmatching {event} with catalogs {catalogs} for candidates...\t")
         eventCands = find_cands(event, gwSkymaps[event], catalogs, conf)
 
         if allSavedCands is not None:
@@ -349,7 +355,7 @@ def agn_Table(catalogs:set, conf:float, gwSkymaps:dict) -> Table:
         
         allUsedEvents[event] = str([ str(x) for x in eventCands["ID"] ])
         with open(eventFilepath, 'w') as file: json.dump(allUsedEvents, file)
-        print(f"\t\tCrossmatched and cached to JSON! ({tally}/{len(gwSkymaps)}, {100*np.round(tally/len(gwSkymaps), 3)}%)\n")
+        print(f"\t\tCrossmatched and cached to JSON! {progress}\n")
 
     return allSavedCands
 
@@ -365,6 +371,8 @@ def main():
     gwDataFrame = gw_DataFrame(updateDF=True)
     
     agnTable = agn_Table(catalogs, conf, gwSkymaps)
+    
+    return gwDataFrame, agnTable
 ###############################################################################
 
-main()
+GWDF, AGNT = main()

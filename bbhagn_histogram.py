@@ -161,7 +161,7 @@ def get_intervals(f, bins, conf_list):
 
 def main():
     
-    path = "/Users/mck/Desktop/palmese_research/corr_scripts/O4_samples_graham23.dat"
+    path = "PATH/PATH/PATH"
     data = np.loadtxt(path)
     bins = np.linspace(0,0.24,num=24)
     fit_bins = np.linspace(0,0.24,num=1000)

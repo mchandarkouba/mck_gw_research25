@@ -242,7 +242,7 @@ class GW:
                 skymap.write(path, overwrite=True, format='fits')
                 
             else:
-                if self.verbose: print(f"kwarg overwrite was set False and the following files were found: \n\t{self.path} \n\t{self.path_flat}")
+                if self.verbose: print(f"kwarg overwrite was set False and the following files were found: \n\t{path}")
             
             kwargs = {"c":c,
                       "name":name,
@@ -287,12 +287,14 @@ class GW:
         ax = fig.add_subplot(111, projection="astro degrees mollweide",)
         
         ax.grid()
+        if self.path_flat==None: self.flatten()
         ax.imshow_hpx(self.path_flat, cmap='cylon')
         ax.set_title(self.name)
         
         patches = []
         if plot_regions:
             for n,region in enumerate(self.regions):
+                region.flatten()
                 col = (0.8/len(self.regions)) *n
                 ax.contour_hpx(region.path_flat, 
                                levels=0, 
@@ -398,7 +400,7 @@ class GW:
     
     ############################################################
     
-    def flatten(self):
+    def flatten(self, overwrite=False):
         """
         Returns
         -------
@@ -407,9 +409,11 @@ class GW:
         """
         self.path_flat = self.path.replace('.fits', '_flattened.fits').replace(TOP_DIR, MOD_DIR)
         flat_dir = os.path.dirname(self.path_flat)
-        if not os.path.exists( flat_dir ): os.makedirs(flat_dir, exist_ok=True)
-        subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat],) #uses cmd to flatten the skymap from a filepath
-        
+        if not os.path.exists( flat_dir ): 
+            os.makedirs(flat_dir, exist_ok=True)
+            
+        if not os.path.exists(self.path_flat) or overwrite: subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat],) #uses cmd to flatten the skymap from a filepath
+                
         return self.path_flat
     
     ############################################################
@@ -588,15 +592,17 @@ class ConfidenceRegion:
     
     ############################################################
     
-    def flatten(self):
+    def flatten(self, overwrite=False):
         """
         See GW.flatten()
         """
         self.path_flat = self.path.replace('.fits', '_flattened.fits').replace(TOP_DIR, MOD_DIR)
         flat_dir = os.path.dirname(self.path_flat)
-        if not os.path.exists( flat_dir ): os.makedirs(flat_dir, exist_ok=True)
-        subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat]) #uses cmd to flatten the skymap from a filepath
-        
+        if not os.path.exists( flat_dir ): 
+            os.makedirs(flat_dir, exist_ok=True)
+            
+        if not os.path.exists(self.path_flat) or overwrite: subprocess.run(['ligo-skymap-flatten', self.path, self.path_flat],) #uses cmd to flatten the skymap from a filepath
+                
         return self.path_flat
     
     ############################################################
@@ -955,7 +961,6 @@ def contour_intersection(gws,
     FIPIX = np.array([])
 
     for n,gw in enumerate(gws):
-        print(gw.name)
         c = conf_map[gw.name]
         region = None
         

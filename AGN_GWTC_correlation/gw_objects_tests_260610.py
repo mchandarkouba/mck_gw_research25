@@ -9,9 +9,9 @@ name2 = "GW230529_181500"
 name3 = "GW231102_071736"
 
 gws = (
-       GW(name=name1, find_valid_region=False),
-       GW(name=name3, find_valid_region=False),
-       GW(name=name2, find_valid_region=False),
+#        GW(name=name1, find_valid_region=False),
+#        GW(name=name3, find_valid_region=False),
+#        GW(name=name2, find_valid_region=False),
        )
 
 ###############################################################################
@@ -87,4 +87,22 @@ def ang_to_pixinfo_test():
         
 ###############################################################################
 
-ang_to_pixinfo_test()
+def corr_candidates_test():
+    events = [GW(name="GW150914"),
+              GW(path="/Users/mck/Desktop/palmese_research/corr_scripts/GWTC_5.0/GWTC_4.0/O3a_skymaps/IGWN-GWTC2p1-v2-GW151012_095443_PEDataRelease_cosmo_reweight_C01:Mixed.fits")
+              ]
+    c = 0.95
+    for gw in events: gw.ConfidenceRegion(0.95)
+    
+    intersect = contour_intersection(events,
+                                     constant_level=c,
+                                     nside_final=2**5,
+                                     )
+    
+    fig = plt.figure(figsize=(6,6), dpi=150)
+    ax = fig.add_subplot(111, projection="astro degrees mollweide",)
+    
+    ax.grid()
+    ax.contour_hpx(intersect, linewidths=0.5, colors="black")
+
+corr_candidates_test()

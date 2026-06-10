@@ -12,4 +12,20 @@ Most scripts use the gw_objects package found in the main branch.
 --------------------------------------------------
 06-09-2026
 --------------------------------------------------
-Created branch with correlation_setup_260609.py, gw_objects_tests_260609.py, bbhagn_lambda_histogram_260609.py, gwtable_txtgen_overleaf_260609.py, and continuous_binary_search.py (an implementation is in bbhagn_lambda_histogram file).
+Created branch with correlation_setup_260609.py, gw_objects_tests_260609.py, bbhagn_lambda_histogram_260609.py, gwtable_txtgen_overleaf_260609.py, and continuous_binary_search.py (an implementation is in bbhagn_lambda_histogram file). 
+
+
+--------------------------------------------------
+06-10-2026
+--------------------------------------------------
+Replaced correlation_setup_260609.py with correlation_setup_260610.py (updated version)
+
+Changes in correlation_setup_260610.py:
+- Fixed vstack error for empty new candidate Tables
+- all-crossmatch Table now proper subset of catalog Tables (unique values)
+- added docstrings
+
+gw_objects module updates:
+- GW and ConfidenceRegion .flatten() functions automatically implemented for GW.matplotlib_plot()
+- added overwrite option for .flatten() functions
+- gw_objects_tests has new tests

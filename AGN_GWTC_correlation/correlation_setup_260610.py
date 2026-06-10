@@ -32,6 +32,23 @@ LIGO_DIR = TOP_DIR + "GWTC_5.0/" #where to access GW files
 ###############################################################################
 
 def messenger(*keys, fvars:list=[]):
+    """
+    Parameters
+    ----------
+    *keys : int > 0
+        keys for nested message dictionaries.
+    fvars : list, optional
+        Required variables for some messages which use f-strings. 
+        Args in fvars are assigned in order to inserted variables in messages.
+        The default is [].
+
+    Effects
+    ---------
+    Messenger is toggleable to print stored messages in the interpreter using global verbose.
+    All messages are stored into a .txt log file to track progression.
+    
+    """
+    
     logpath = TOP_DIR + "correlation_script6_log.txt"
     hbar = '\n' + '-'*100 + '\n'
     
@@ -102,6 +119,19 @@ def messenger(*keys, fvars:list=[]):
 ###############################################################################
 
 def load_catalog(name:str) -> (Table,list):
+    """
+    Parameters
+    ----------
+    name : str
+        Currently accepts keys "milliquas" or "quaia". 
+        Catalogs not on file will be downloaded from stored links.
+
+    Returns
+    -------
+    (Table,list)
+        Returns astropy Table of the catalog and the list keys 
+        corresponding to colnames for object id, ra, dec, and redshift.
+    """
     
     key = {
             'milliquas' : {'url': 'https://quasars.org/milliquas.fits.zip',
@@ -139,6 +169,23 @@ def format_catalog(c:np.ndarray, keys:dict) -> np.ndarray:
 ###############################################################################
 
 def find_cands(gwPath:str, catalogs:set, conf:float,) -> Table:
+    """
+    Parameters
+    ----------
+    gwPath : str
+        Path to GWEvent skymap.
+    catalogs : set
+        Object catalogs.
+    conf : float
+        Crossmatch confidence level.
+
+    Returns
+    -------
+    Table
+        Subset of catalogs crossmatched and found to be within the conf% confidence volume
+        of the GWEvent associated with gwPath.
+
+    """
     colnames = ['ID', 'COORD', 'Z', 'CATALOG']
     colnames += ['t_peak', 'f_peak', 't_rise', 't_decay', 'f_base']
     candidates = Table([ np.array([]) ]*len(colnames),
@@ -169,6 +216,13 @@ def find_cands(gwPath:str, catalogs:set, conf:float,) -> Table:
 ###############################################################################
 
 def pick_fits():
+    """
+    Returns
+    -------
+    gwSkymaps : dict
+        { gw name : skymap filepath } for all events in GWTC 5.0 csv file.
+
+    """
     gwSkymaps = dict()
     allSkymaps = recursive_all_skymaps(LIGO_DIR)
 
@@ -197,6 +251,23 @@ def pick_fits():
 ###############################################################################
 
 def gw_DataFrame(conf, gwSkymaps:dict, updateDF=True):
+    """
+    Parameters
+    ----------
+    conf : float
+        Confidence level for crossmatching step.
+    gwSkymaps : dict
+        see pick_fits().
+    updateDF : bool, optional
+        When False, any existing DataFrame on file is used. 
+        The default is True.
+
+    Effects
+    ----------
+    Reformats GWTC 5.0 event-versions csv for lambda posterior code
+    into an original and clean (nan rows dropped) csv files.
+    
+    """
     
     dfName_origin = 'gw_dataFrame_original.csv'
     dfName_clean = 'gw_dataFrame_clean.csv'
@@ -204,7 +275,7 @@ def gw_DataFrame(conf, gwSkymaps:dict, updateDF=True):
     gwDataFrames = () #final output
 
     
-    if all(path.exists(TOP_DIR+dfName) for dfName in [dfName_origin, dfName_clean]) and not updateDF:
+    if all(path.exists(OUTPUT_DIR+dfName) for dfName in [dfName_origin, dfName_clean]) and not updateDF:
         messenger(2,1)
         
         for dfName in [dfName_origin, dfName_clean]:
@@ -220,7 +291,7 @@ def gw_DataFrame(conf, gwSkymaps:dict, updateDF=True):
         massCols = ['mass_1_source', 'mass_2_source','final_mass_source_upper', ]#list(set([(axis_name if 'mass' in axis_name else None) for axis_name in event_data.axes]).remove(None))
         MASSES = event_data[massCols]
         
-        dfPath_origin = TOP_DIR + dfName_origin
+        dfPath_origin = OUTPUT_DIR + dfName_origin
                 
         FREQ = pd.Series([conf]*len(MASSES))
         ID = []
@@ -247,7 +318,7 @@ def gw_DataFrame(conf, gwSkymaps:dict, updateDF=True):
                          axis=0,
                          )
         gwDataFrame_clean = gwDataFrame_origin[noNulls]
-        dfPath_clean = TOP_DIR + dfName_clean
+        dfPath_clean = OUTPUT_DIR + dfName_clean
         gwDataFrame_clean.to_csv(dfPath_clean)
         
         #gwDataFrames = (gwDataFrame_origin, gwDataFrame_clean)
@@ -257,6 +328,23 @@ def gw_DataFrame(conf, gwSkymaps:dict, updateDF=True):
 ###############################################################################
 
 def agn_Table(catalogs:set, conf:float, gwSkymaps:dict) -> Table:
+    """
+    Parameters
+    ----------
+    catalogs : set
+        Object catalogs to be selected from.
+    conf : float
+        Crossmatch step confidence level.
+    gwSkymaps : dict
+        see pick_fits().
+
+    Returns
+    -------
+    Table
+        Subset of combined catalogs, of all events included within the conf% confidence volume 
+        of any GWEvent in gwSkymaps.
+
+    """
     
     candFilename = f"candidates_{'&'.join(catalogs)}_{np.round(100*conf)}percent.fits"
     eventFilename = f"event_cache_{'&'.join(catalogs)}_{np.round(100*conf)}percent.json"
@@ -265,7 +353,7 @@ def agn_Table(catalogs:set, conf:float, gwSkymaps:dict) -> Table:
     eventFilepath = OUTPUT_DIR + eventFilename
     
     allSavedCands = None
-    allUsedEvents = {}
+    allUsedEvents = dict()
     
     ###########################################################################
     
@@ -310,12 +398,17 @@ def agn_Table(catalogs:set, conf:float, gwSkymaps:dict) -> Table:
         messenger(3,7, fvars=[name])
         if gwSkymaps[name]==None: continue
         eventCands = find_cands(gwSkymaps[name], catalogs, conf)
-
-        allSavedCands = vstack([allSavedCands, eventCands]) if allSavedCands is not None else eventCands
-        allSavedCands = unique(allSavedCands)
-    
-        allSavedCands.write(candFilepath, format="fits", overwrite=True)
         
+        if allSavedCands!=None :
+            newCands = np.setdiff1d(eventCands["ID"], allSavedCands["ID"])
+            newCands = eventCands[ np.where(np.isin(eventCands["ID"], newCands))[0] ]
+            if np.size(newCands["ID"])>0: allSavedCands = vstack([allSavedCands, newCands])
+            
+        else:
+            
+            allSavedCands = eventCands  
+
+        allSavedCands.write(candFilepath, format="fits", overwrite=True)
         allUsedEvents[name] = str([ str(x) for x in eventCands["ID"] ])
         with open(eventFilepath, 'w') as file: json.dump(allUsedEvents, file)
         messenger(3,8, fvars=[progress])
@@ -325,6 +418,17 @@ def agn_Table(catalogs:set, conf:float, gwSkymaps:dict) -> Table:
 ###############################################################################
 
 def agnTable_to_csv(catalogs, conf):
+    """
+    Parameters
+    ----------
+    catalogs : set
+    conf : float
+
+    Returns
+    -------
+    .csv formatted AGN Table, final step after all crossmatching.
+
+    """
     candFilename = f"candidates_{'&'.join(catalogs)}_{np.round(100*conf)}percent.fits"
     candFilepath = OUTPUT_DIR + candFilename
     

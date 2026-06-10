@@ -1,0 +1,15 @@
+##################################################
+INFO
+--------------------------------------------------
+Setup files are used to format and select objects/events from GW and AGN catalogs, which are then compared using tcabrera's lambda posterior probability distribution calculation (branched here: https://github.com/mchandarkouba/tcabrera_bbhagn). 
+
+Plotting files are to format/visualize input data or lambda posterior for publication.
+
+Most scripts use the gw_objects package found in the main branch.
+
+##################################################
+
+--------------------------------------------------
+06-09-2026
+--------------------------------------------------
+Created branch with correlation_setup_260609.py, gw_objects_tests_260609.py, bbhagn_lambda_histogram_260609.py, gwtable_txtgen_overleaf_260609.py, and continuous_binary_search.py (an implementation is in bbhagn_lambda_histogram file).

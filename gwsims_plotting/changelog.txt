@@ -1,0 +1,12 @@
+##################################################
+INFO
+--------------------------------------------------
+Plotting scripts from simulated gravitational wave events and simulated LVK network detection.
+Analysis of localization, AGN flarerate, and detection as a function of distance, source masses, and interferometers used during detection.
+
+##################################################
+
+--------------------------------------------------
+06-09-2026
+--------------------------------------------------
+Created branch with logscale_cdf_250606.py, logscale_density_scatter_250606.py, logscale_population_scatter_250606.py .

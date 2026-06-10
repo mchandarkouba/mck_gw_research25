@@ -1,0 +1,12 @@
+##################################################
+INFO
+--------------------------------------------------
+Alert bot subscribed to the gcn kafka stream for Einstein Probe events. Triggers are crossmatched with recent GraceDB events and messaged in Slack with an accompanying graphic.
+
+##################################################
+
+--------------------------------------------------
+06-09-2026
+--------------------------------------------------
+Created branch with bot_260501.py and bot_260609_test.py .
+Test bot file is intended to replace older versions using the gw_class.py module in main directory.

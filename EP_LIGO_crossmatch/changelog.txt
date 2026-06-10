@@ -1,0 +1,11 @@
+##################################################
+INFO
+--------------------------------------------------
+Crossmatch scripts from GraceDB gravitational wave events and a dataset of past Einstein Probe x-ray bursts. The crossmatch process started with EP events x GraceDb, then EP x time, then EP x space.
+
+##################################################
+
+--------------------------------------------------
+06-09-2026
+--------------------------------------------------
+Created branch with crossmatch_graceDB_250606.py, crossmatch_space_250606.py, crossmatch_time_250606.py

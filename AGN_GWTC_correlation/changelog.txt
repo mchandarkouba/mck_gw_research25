@@ -29,3 +29,13 @@ gw_objects module updates:
 - GW and ConfidenceRegion .flatten() functions automatically implemented for GW.matplotlib_plot()
 - added overwrite option for .flatten() functions
 - gw_objects_tests has new tests
+
+--------------------------------------------------
+06-14-2026
+--------------------------------------------------
+Replaced correlation_setup_260610.py with correlation_setup_260614.py (bug fixes)
+
+gw_objects module updates: bug fixes in contour_union() function
+
+New tests in gw_objects_tests code
+

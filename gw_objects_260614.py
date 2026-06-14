@@ -55,6 +55,7 @@ import subprocess
 ###############################################################################
 
 default_hierarchy = ['gstlal', 'NRSur7dq4', 'Mixed', 'sco']
+
 ### algorithm vs template hierarchies?
 default_cosmo = Planck15
 
@@ -891,15 +892,18 @@ def contour_union(gws,
             
         elif sum_type=="prob":
             PROB = table["PROBDENSITY"] * ah.nside_to_pixel_area(NSIDE)
+            FPROB = np.array([0.,]*len(FPIX))
             COUNTS = np.array([0,]*np.size(FPIX))
+            
             for i,ipix in enumerate(FIPIX): 
-                FPIX[ipix] += PROB[i].value
+                FPROB[ipix] += PROB[i].value
                 COUNTS[ipix] += 1
             
-            FPIX[COUNTS!=0] /= COUNTS[COUNTS!=0]
+            FPROB[COUNTS>0.] /= COUNTS[COUNTS>0]
+            FPIX += FPROB
     
-    if sum_type=="freq": FPIX *= 1/np.max(FPIX)
-    if sum_type=="prob": FPIX *= len(gws)/np.sum(FPIX)
+    if sum_type=="freq": FPIX /= np.max(FPIX)
+    if sum_type=="prob": FPIX /= np.sum(FPIX) #* ah.nside_to_pixel_area(nside_final).to(units.degree**2).value
         
     return FPIX
 

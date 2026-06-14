@@ -302,7 +302,7 @@ def gw_DataFrame(conf, gwSkymaps:dict, updateDF=True):
             
             skymapPath = gwSkymaps.get(graceID, '')
             if skymapPath != None:
-                PATH += [LIGO_DIR + skymapPath]
+                PATH += [skymapPath,]
             else:
                 PATH += [np.nan]
      
@@ -442,7 +442,7 @@ def agnTable_to_csv(catalogs, conf):
         data["COORD.ra"].name = 'ra'
         data["COORD.dec"].name = 'dec'
         
-        data.write(csvFilepath, format="csv")
+        data.write(csvFilepath, format="csv", overwrite=True)
         
     messenger(4,1)
 

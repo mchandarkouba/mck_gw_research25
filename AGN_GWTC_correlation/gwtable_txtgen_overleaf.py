@@ -25,10 +25,9 @@ cinclude = ['grace_id',
             'mass_2_source', 
             'final_mass_source_upper',
             ]
-rexclude = {"grace_id": [#"GW231123_135430", 
-                         #"GW200308_173609", 
-                         #"GW200322_091133", 
-                         #"GW190929_012149",
+rexclude = {"grace_id": ["GW231123_135430", 
+                         "GW200308_173609", 
+                         "GW200322_091133", 
                          ]
            }
 

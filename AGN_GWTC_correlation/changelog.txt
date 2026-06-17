@@ -39,3 +39,12 @@ gw_objects module updates: bug fixes in contour_union() function
 
 New tests in gw_objects_tests code
 
+
+--------------------------------------------------
+06-16-2026
+--------------------------------------------------
+Copying:
+	/Users/mck/Desktop/palmese_research/corr_scripts/overleaf_table_txtgen.py
+	--> /Users/mck/Desktop/palmese_research/research_repo/AGN_GWTC_correlation/gwtable_txtgen_overleaf.py
+
+

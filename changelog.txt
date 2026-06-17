@@ -1,0 +1,18 @@
+
+--------------------------------------------------
+06-16-2026
+--------------------------------------------------
+Copying:
+	/Users/mck/Desktop/palmese_research/corr_scripts/gw_class.py
+	--> /Users/mck/Desktop/palmese_research/research_repo/gw_objects.py
+
+first official use of update_repos.py!
+
+--------------------------------------------------
+06-16-2026
+--------------------------------------------------
+Copying:
+	/Users/mck/Desktop/palmese_research/update_repos.py
+	--> /Users/mck/Desktop/palmese_research/research_repo/repo_functions.py
+
+

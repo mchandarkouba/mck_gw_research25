@@ -16,3 +16,13 @@ Copying:
 	--> /Users/mck/Desktop/palmese_research/research_repo/repo_functions.py
 
 
+
+--------------------------------------------------
+06-20-2026
+--------------------------------------------------
+Copied:
+	/Users/mck/Desktop/palmese_research/update_repos.py
+	--> /Users/mck/Desktop/palmese_research/research_repo/repo_functions.py
+
+
+

@@ -108,18 +108,18 @@ def update_changelog(path_in=None,
     changelog = dir_out + "/changelog.txt"
     if not os.path.exists(changelog): os.makedirs(changelog)
     
-    with open(changelog, 'r') as file: lines = file.readlines()
+    # with open(changelog, 'r') as file: lines = file.readlines()
+    # 
+    # new_update = True
+    # 
+    # if len(lines)>3:
+    #     rlines = lines[::-1]
+    #    
+    #     for i, in range(len(rlines)-2):
+    #         l0, l1, l2 = rlines[i], rlines[i+1], rlines[i+2]
+    #         if l0==l2==hbar and l1==DATE: new_update = False
     
-    new_update = True
-    
-    if len(lines)>=3:
-        rlines = lines[::-1]
-        
-        for i, in range(len(rlines)-2):
-            l0, l1, l2 = rlines[i], rlines[i+1], rlines[i+2]
-            if l0==l2==hbar and l1==DATE: new_update = False
-    
-    update = hbar+DATE+hbar+generic if new_update else generic
+    update = hbar+DATE+hbar+generic # if new_update else generic
     update = update + '\n\n' + add_note + '\n'
     with open(changelog, 'a') as file: file.write(update)
 

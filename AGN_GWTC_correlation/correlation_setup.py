@@ -141,6 +141,10 @@ def load_catalog(name:str) -> (Table,list):
            'quaia' : {'url': 'https://zenodo.org/records/8060755/files/quaia_G20.0.fits?download=1',
                       'keys': ['source_id', 'ra', 'dec', 'redshift_quaia']
                      },
+           
+           'desi_agngal_dr1' : {'url': '',
+                                'keys' : ["TARGETID", "TARGET_RA", "TARGET_DEC", "Z"],
+                                },
           }
 
     catalog_dir = f'{TOP_DIR}{name}.fits'
@@ -230,12 +234,13 @@ def pick_fits():
     filepath = TOP_DIR + filename
     event_data = pd.read_csv(filepath)
     names = np.unique([ get_gw_name(url) for url in event_data["detail_url"] ])
+    vera_hierarchy = ["/hildafs/projects/phy220048p/chandark/corr_files/GWTC_5.0/GWTC-Preferred-Skymaps"] + default_hierarchy
     
     skipped = []
     for name in names: 
         try:
             gwSkymaps[name] = retrieve_skymaps(name,
-                                               hierarchy=default_hierarchy,
+                                               hierarchy=vera_hierarchy,
                                                skymaps=allSkymaps,
                                                )[0]
         except IndexError:
@@ -302,7 +307,7 @@ def gw_DataFrame(conf, gwSkymaps:dict, updateDF=True):
             
             skymapPath = gwSkymaps.get(graceID, '')
             if skymapPath != None:
-                PATH += [skymapPath,]
+                PATH += [skymapPath]
             else:
                 PATH += [np.nan]
      
@@ -442,7 +447,7 @@ def agnTable_to_csv(catalogs, conf):
         data["COORD.ra"].name = 'ra'
         data["COORD.dec"].name = 'dec'
         
-        data.write(csvFilepath, format="csv", overwrite=True)
+        data.write(csvFilepath, format="csv", overwrite=True,)
         
     messenger(4,1)
 
@@ -451,7 +456,7 @@ def agnTable_to_csv(catalogs, conf):
 ###############################################################################
 
 def run_all():
-    catalogs = {'milliquas',}    
+    catalogs = {'desi_agngal_dr1',}    
     conf = 0.95
 
     messenger(1)

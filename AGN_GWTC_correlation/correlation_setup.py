@@ -409,13 +409,14 @@ def agn_Table(catalogs:set, conf:float, gwSkymaps:dict) -> Table:
             newCands = eventCands[ np.where(np.isin(eventCands["ID"], newCands))[0] ]
             if np.size(newCands["ID"])>0: allSavedCands = vstack([allSavedCands, newCands])
             
-        else:
+            allSavedCands.write(candFilepath, format="fits", overwrite=True)
+            allUsedEvents[name] = str([ str(x) for x in eventCands["ID"] ])
+            with open(eventFilepath, 'w') as file: json.dump(allUsedEvents, file)
             
-            allSavedCands = eventCands  
+        elif np.size(eventCands["ID"])>0: 
+            allSavedCands = eventCands
 
-        allSavedCands.write(candFilepath, format="fits", overwrite=True)
-        allUsedEvents[name] = str([ str(x) for x in eventCands["ID"] ])
-        with open(eventFilepath, 'w') as file: json.dump(allUsedEvents, file)
+        
         messenger(3,8, fvars=[progress])
 
     return

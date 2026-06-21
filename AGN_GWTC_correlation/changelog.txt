@@ -58,3 +58,13 @@ Copied:
 
 
 Updating correlation script with edits made on VERA
+
+--------------------------------------------------
+06-21-2026
+--------------------------------------------------
+Copied:
+	/Users/mck/Desktop/palmese_research/corr_scripts/correlation_script6.py
+	--> /Users/mck/Desktop/palmese_research/research_repo/AGN_GWTC_correlation/correlation_setup.py
+
+
+

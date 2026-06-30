@@ -142,7 +142,7 @@ def load_catalog(name:str) -> (Table,list):
                       'keys': ['source_id', 'ra', 'dec', 'redshift_quaia']
                      },
            
-           'desi_agngal_dr1' : {'url': '',
+           'desi_dr1' : {'url': '',
                                 'keys' : ["TARGETID", "TARGET_RA", "TARGET_DEC", "Z"],
                                 },
           }
@@ -150,16 +150,17 @@ def load_catalog(name:str) -> (Table,list):
     catalog_dir = f'{TOP_DIR}{name}.fits'
     address=catalog_dir if path.exists(catalog_dir) else key[name]['url']
     
-    try:
-        with fits_astropy.open(address, cache=False) as hdul:
-            hdul.writeto(catalog_dir, overwrite=True)
-            
-            data = hdul[1].data
-            data = Table( data )
-            return data, key[name]['keys']
+    with fits_astropy.open(address, cache=False) as hdul:
+        hdul.writeto(catalog_dir, overwrite=True)
+        
+        data = hdul[1].data
+        data = Table( data )
     
-    except Exception as e:
-        print(f'Error downloading or retrieving: {e}')
+    if name=="desi_agngal_dr1":
+        data = data [ data["SV3_DESI_TARGET"] & 4 != 0 ] # Applying mask at second bit of col SV3_DESI_TARGET (0x...100 if quasar)
+        
+    return data, key[name]['keys']
+
 
 ###############################################################################
 
@@ -457,7 +458,7 @@ def agnTable_to_csv(catalogs, conf):
 ###############################################################################
 
 def run_all():
-    catalogs = {'desi_agngal_dr1',}    
+    catalogs = {'desi_dr1',}    
     conf = 0.95
 
     messenger(1)
